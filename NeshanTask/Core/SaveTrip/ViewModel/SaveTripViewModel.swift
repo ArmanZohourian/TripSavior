@@ -1,15 +1,15 @@
 //
-//  ContactManager.swift
+//  SaveTripViewModel.swift
 //  NeshanTask
 //
-//  Created by Arman Zohourian on 1/20/24.
+//  Created by Arman Zohourian on 1/26/24.
 //
 
 import Foundation
 import Contacts
-
-
-class ContactManager {
+class SaveTripViewModel {
+    
+    var contacts = [CNContact]()
     
     func fetchAllContacts() {
         // Request authorization to access contacts
@@ -25,7 +25,8 @@ class ContactManager {
                 CNContactGivenNameKey,
                 CNContactFamilyNameKey,
                 CNContactEmailAddressesKey,
-                CNContactPhoneNumbersKey
+                CNContactPhoneNumbersKey,
+                CNContactThumbnailImageDataKey
             ]
 
             // Fetch request
@@ -35,7 +36,7 @@ class ContactManager {
                 
                 try store.enumerateContacts(with: request) { (contact, stop) in
                     // Process each contact
-                    
+                    self.contacts.append(contact)
                     print("Name: \(contact.givenName) \(contact.familyName)")
 
                     // Email addresses
@@ -50,16 +51,16 @@ class ContactManager {
 
                     print("-----")
                 }
+                
+                
             } catch {
                 print("Error fetching contacts: \(error)")
+                
             }
         }
     }
-    
-    func saveContact(with contact: CNContact) {
+    func addTrip() {
         
     }
+    
 }
-
-
-

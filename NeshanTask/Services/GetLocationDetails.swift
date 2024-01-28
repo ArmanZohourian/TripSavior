@@ -15,7 +15,7 @@ enum GetLocationDetails: RequestProtocol {
     }
     
     var reuqestType: RequestType {
-        .POST
+        .GET
     }
     
     var addAuthorizationToken: Bool {

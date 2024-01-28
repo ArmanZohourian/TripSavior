@@ -9,6 +9,14 @@ import UIKit
 
 class BottomSheetView: UIView {
     
+    
+    var locationDetails: LocationDetails? {
+        didSet {
+            titleText.text = locationDetails?.city ?? "Saint Louis"
+            overviewText.text = locationDetails?.neighbourhood ?? "Nothing to show"
+        }
+    }
+    
     private lazy var titleText: UILabel = {
         let label = UILabel()
         label.text = "Saint Louis"
@@ -65,7 +73,6 @@ class BottomSheetView: UIView {
     init(action: @escaping ()-> ()) {
         self.buttonAction = action
         super.init(frame: .zero)
-        
         setupViewHierarchy()
         setupViewAttributes()
         setupLayout()

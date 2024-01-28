@@ -11,6 +11,8 @@ import CoreLocation
 
 class ExploreViewController: UIViewController, CLLocationManagerDelegate {
     
+    private let exploreViewModel = ExploreViewModel()
+    
     let mapView : MKMapView = {
         let map = MKMapView()
         map.overrideUserInterfaceStyle = .dark
@@ -44,9 +46,10 @@ class ExploreViewController: UIViewController, CLLocationManagerDelegate {
         setupViewAttributes()
         setupLayout()
         retrieveLocation()
+        exploreViewModel.delegate = self
+        exploreViewModel.getLocationDetails(with: 36.313274, longtitude: 59.598438)
     }
 }
-
 private extension ExploreViewController {
     
     func setupViewHierarchy(){
@@ -125,5 +128,15 @@ private extension ExploreViewController {
             })
             print("Ended")
         }
+    }
+}
+
+extension ExploreViewController: ExploreViewModelDelegate {
+    func didFinish() {
+        bottomSheet.locationDetails = exploreViewModel.locationDetails
+        print("Finished")
+    }
+    func didFail(error: Error) {
+        print("Error happened")
     }
 }
