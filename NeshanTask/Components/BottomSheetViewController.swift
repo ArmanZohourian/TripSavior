@@ -7,6 +7,8 @@
 
 import Foundation
 class BottomSheetViewController: UIViewController {
+
+    
     // MARK: - UI
     /// Main bottom sheet container view
     private lazy var mainContainerView: UIView = {
@@ -15,7 +17,6 @@ class BottomSheetViewController: UIViewController {
         view.backgroundColor = .systemBackground
         view.layer.cornerRadius = 8
         view.clipsToBounds = true
-        view.backgroundColor = .red
         return view
     }()
     
@@ -44,15 +45,6 @@ class BottomSheetViewController: UIViewController {
         return view
     }()
     
-    /// Dimmed background view
-    private lazy var dimmedView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = true
-        view.backgroundColor = .black
-        view.alpha = 0
-        return view
-    }()
-    
     // MARK: - Properties
     
     /// Maximum alpha for dimmed view
@@ -62,11 +54,14 @@ class BottomSheetViewController: UIViewController {
     /// Minimum spacing between the top edge and bottom sheet
     private var minTopSpacing: CGFloat = 80
     
-    // MARK: - View Setup
+    weak var delegate: MapDelegate?
+    
+    //MARK: Methods
     override func viewDidLoad() {
         super.viewDidLoad()
         setupViews()
         setupGestures()
+        
     }
     
     override func viewDidAppear(_ animated: Bool) {
@@ -85,7 +80,7 @@ class BottomSheetViewController: UIViewController {
         NSLayoutConstraint.activate([
             mainContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             mainContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            mainContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            mainContainerView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -60),
             mainContainerView.topAnchor.constraint(greaterThanOrEqualTo: view.topAnchor, constant: minTopSpacing)
         ])
         
@@ -117,9 +112,6 @@ class BottomSheetViewController: UIViewController {
     }
     
     private func setupGestures() {
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTapDimmedView))
-        dimmedView.addGestureRecognizer(tapGesture)
-        
         let panGesture = UIPanGestureRecognizer(target: self, action: #selector(handlePanGesture(_:)))
         panGesture.delaysTouchesBegan = false
         panGesture.delaysTouchesEnded = false
@@ -133,54 +125,59 @@ class BottomSheetViewController: UIViewController {
     //MARK: Handle Gesture
     @objc private func handlePanGesture(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: view)
-        // get drag direction
-        let isDraggingDown = translation.y > 0
-        guard isDraggingDown else { return }
         
-        let pannedHeight = translation.y
-        let currentY = self.view.frame.height - self.mainContainerView.frame.height
-        let viewPorpotion = self.view.frame.height - (self.view.frame.height / 0.5)
-        // handle gesture state
+        gesture.cancelsTouchesInView = false
+
+        // Calculate the new frame origin for the bottom sheet
+        let newY = self.mainContainerView.frame.origin.y + translation.y
+
+        // Update the frame of the bottom sheet
+        self.mainContainerView.frame.origin.y = max(newY, self.view.frame.height - self.mainContainerView.frame.height)
+
+        // Reset the translation to avoid cumulative translations
+        gesture.setTranslation(.zero, in: view)
+
+        // Handle gesture state
         switch gesture.state {
-        case .changed:
-            // This state will occur when user is dragging
-            self.mainContainerView.frame.origin.y = currentY + pannedHeight
         case .ended:
-            // When user stop dragging
-            // if fulfil the condition dismiss it, else move to original position
-            if pannedHeight >= minDismissiblePanHeight {
-                dismissBottomSheet()
-            } else {
-                self.mainContainerView.frame.origin.y = currentY
+            // Optionally, you can add some animation when the gesture ends
+            UIView.animate(withDuration: 0.3) {
+                // If the bottom sheet is dragged up beyond a certain threshold, keep it at the bottom
+                if self.mainContainerView.frame.origin.y < self.view.frame.height - self.mainContainerView.frame.height * 0.7 {
+                    self.mainContainerView.frame.origin.y = self.view.frame.height - self.mainContainerView.frame.height - 60
+                } else {
+                    // Otherwise, move it back to the bottom
+                    self.mainContainerView.frame.origin.y = self.view.frame.height - self.mainContainerView.frame.height * 0.3
+                    self.delegate?.didClosedSheet()
+                }
             }
         default:
             break
         }
     }
-
+    
     private func animatePresent() {
-        dimmedView.alpha = 0
+//        dimmedView.alpha = 0
         mainContainerView.transform = CGAffineTransform(translationX: 0, y: view.frame.height)
         UIView.animate(withDuration: 0.2) { [weak self] in
             self?.mainContainerView.transform = .identity
         }
         // add more animation duration for smoothness
         UIView.animate(withDuration: 0.4) { [weak self] in
-            guard let self = self else { return }
-            self.dimmedView.alpha = self.maxDimmedAlpha
+            guard self != nil else { return }
+//            self.dimmedView.alpha = self.maxDimmedAlpha
         }
     }
 
     func dismissBottomSheet() {
         UIView.animate(withDuration: 0.2, animations: {  [weak self] in
             guard let self = self else { return }
-            self.dimmedView.alpha = self.maxDimmedAlpha
+//            self.dimmedView.alpha = self.maxDimmedAlpha
             self.mainContainerView.frame.origin.y = self.view.frame.height
         }, completion: {  [weak self] _ in
             self?.dismiss(animated: false)
         })
     }
-    
     // sub-view controller will call this function to set content
     func setContent(content: UIView) {
         contentView.addSubview(content)
@@ -192,6 +189,24 @@ class BottomSheetViewController: UIViewController {
         ])
         view.layoutIfNeeded()
     }
+    
+    func initiateDragDown() {
+        let gesture = UIPanGestureRecognizer()
+        gesture.state = .began
+
+        // Set translation to simulate dragging down
+        gesture.setTranslation(CGPoint(x: 0, y: 50), in: self.view)
+
+        // Trigger the gesture handler
+        handlePanGesture(gesture)
+
+        // Update the state to .ended to complete the gesture
+        gesture.state = .ended
+
+        // Trigger the gesture handler again
+        handlePanGesture(gesture)
+    }
+
 }
 
 extension UIViewController {

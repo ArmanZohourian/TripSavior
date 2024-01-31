@@ -7,8 +7,11 @@
 
 import UIKit
 import Contacts
-//MARK: New controller
-class DemoBottomSheetView: BottomSheetViewController {
+
+protocol ContactDelegate : AnyObject {
+    func didTapAddContact()
+}
+class MapBottomSheetViewController: BottomSheetViewController {
     
     // MARK: - Init and setup
     var locationDetails: LocationDetails? {
@@ -18,6 +21,7 @@ class DemoBottomSheetView: BottomSheetViewController {
     }
     var viewModel: ExploreViewModel
     var saveButtonAction:() -> ()
+    weak var cotnactDelegate: ContactDelegate?
     
     private lazy var cityLabel: UILabel = {
         let label = UILabel()
@@ -87,6 +91,7 @@ class DemoBottomSheetView: BottomSheetViewController {
         stack.axis = .horizontal
         stack.spacing = 7
         stack.alignment = .trailing
+        stack.distribution = .fillEqually
         stack.heightAnchor.constraint(equalToConstant: 31).isActive
          = true
         return stack
@@ -97,6 +102,7 @@ class DemoBottomSheetView: BottomSheetViewController {
         stack.axis = .horizontal
         stack.spacing = 7
         stack.alignment = .trailing
+        stack.distribution = .fillEqually
         stack.distribution = .equalSpacing
         stack.heightAnchor.constraint(equalToConstant: 31).isActive
          = true
@@ -107,7 +113,7 @@ class DemoBottomSheetView: BottomSheetViewController {
         let view = UIStackView()
         view.translatesAutoresizingMaskIntoConstraints = false
         view.axis = .vertical
-        view.alignment = .fill
+        view.alignment = .trailing
         view.spacing = 16
         return view
     }()
@@ -121,13 +127,15 @@ class DemoBottomSheetView: BottomSheetViewController {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+     
+    //MARK: Methods
     override func viewDidLoad() {
         super.viewDidLoad()
         setupCollectionView()
         setupView()
     }
     
+ 
     private func setupView() {
         contentStackView.addArrangedSubview(overviewLabel)
         contentStackView.addArrangedSubview(locationStackView)
@@ -135,9 +143,20 @@ class DemoBottomSheetView: BottomSheetViewController {
         contentStackView.addArrangedSubview(contactCollection)
         contentStackView.addArrangedSubview(saveButton)
         setupArrangedSubViews()
+        setupCustomContraints()
         self.setContent(content: contentStackView)
     }
     
+    private func setupCustomContraints() {
+        NSLayoutConstraint.activate([
+            contactCollection.leadingAnchor.constraint(equalTo: contentStackView.leadingAnchor),
+            contactCollection.trailingAnchor.constraint(equalTo: contentStackView.trailingAnchor),
+            
+            saveButton.leadingAnchor.constraint(equalTo: contentStackView.leadingAnchor),
+            saveButton.trailingAnchor.constraint(equalTo: contentStackView.trailingAnchor),
+        ])
+
+    }
     private func setupArrangedSubViews() {
         locationStackView.addArrangedSubview(cityLabel)
         locationStackView.addArrangedSubview(provinceLabel)
@@ -180,7 +199,8 @@ class DemoBottomSheetView: BottomSheetViewController {
     }
 }
 
-extension DemoBottomSheetView: UICollectionViewDelegate, UICollectionViewDataSource {
+//MARK: Protocols
+extension MapBottomSheetViewController: UICollectionViewDelegate, UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return viewModel.contacts.count + 1
     }
@@ -189,9 +209,12 @@ extension DemoBottomSheetView: UICollectionViewDelegate, UICollectionViewDataSou
         
         if indexPath.item == viewModel.contacts.count {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: AddContactCollectionViewCell.identifier, for: indexPath) as! AddContactCollectionViewCell
+            cell.tapCallback = { [weak self] in
+                self?.cotnactDelegate?.didTapAddContact()
+            }
             return cell
         }
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "contactcell", for: indexPath) as! ContactCollectionViewCell
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: ContactCollectionViewCell.identifier, for: indexPath) as! ContactCollectionViewCell
         let contact = viewModel.contacts[indexPath.row]
         cell.setContact(contact: contact)
         return cell
@@ -202,12 +225,7 @@ extension DemoBottomSheetView: UICollectionViewDelegate, UICollectionViewDataSou
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        
-        
-        if indexPath.row == viewModel.contacts.count + 1 {
-            print("Add contact")
-        }
-        
+                
         let selectedContact = viewModel.contacts[indexPath.row]
         let cell = collectionView.cellForItem(at: indexPath)
         
@@ -215,6 +233,7 @@ extension DemoBottomSheetView: UICollectionViewDelegate, UICollectionViewDataSou
         if viewModel.isSelectedContact(with: selectedContact) {
             cell?.layer.borderWidth = 2.0
             cell?.layer.borderColor = UIColor.blue.cgColor
+            cell?.layer.cornerRadius = 10
         } else {
             cell?.layer.borderWidth = 0
         }
